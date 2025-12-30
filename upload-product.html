@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload Product - MarketHub</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-orange-50 via-white to-orange-50">
+    <!-- Header -->
+    <header class="sticky top-0 z-50 border-b border-orange-100 bg-white/80 backdrop-blur-md">
+        <div class="container mx-auto flex h-16 items-center justify-between px-4">
+            <a href="dashboard.html" class="flex items-center gap-2">
+                <svg class="h-7 w-7 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
+                </svg>
+                <span class="text-xl font-bold text-gray-900">MarketHub</span>
+            </a>
+            <div class="text-right">
+                <div class="text-sm font-medium text-gray-900" id="userName"></div>
+                <div class="text-xs text-gray-600">Wallet: <span id="walletBalance">₱0</span></div>
+            </div>
+        </div>
+    </header>
+
+    <div class="container mx-auto max-w-3xl px-4 py-8">
+        <div class="mb-6">
+            <a href="dashboard.html">
+                <button class="text-gray-600 hover:text-gray-900 flex items-center gap-2">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                    </svg>
+                    Back to Dashboard
+                </button>
+            </a>
+        </div>
+
+        <div id="uploadForm" class="bg-white border border-orange-100 rounded-xl p-8 shadow-lg">
+            <h1 class="text-2xl font-bold text-gray-900 mb-2">Upload New Product</h1>
+            <p class="text-gray-600 mb-6">Fill in the details to list your product on the marketplace</p>
+
+            <form onsubmit="handleSubmit(event)" class="space-y-6">
+                <!-- Product Image -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Product Image</label>
+                    <div id="imagePreview" class="hidden mb-4">
+                        <img id="previewImg" class="max-w-xs rounded-lg border-2 border-orange-200" alt="Preview">
+                    </div>
+                    <input type="file" id="productImage" accept="image/*" class="block w-full max-w-xs text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-orange-50 file:text-orange-600 hover:file:bg-orange-100">
+                </div>
+
+                <!-- Product Name -->
+                <div>
+                    <label for="productName" class="block text-sm font-medium text-gray-700 mb-2">Product Name *</label>
+                    <input type="text" id="productName" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent" placeholder="e.g., Premium Wireless Headphones">
+                </div>
+
+                <!-- Description -->
+                <div>
+                    <label for="description" class="block text-sm font-medium text-gray-700 mb-2">Description *</label>
+                    <textarea id="description" required rows="4" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent" placeholder="Describe your product in detail..."></textarea>
+                </div>
+
+                <!-- Price -->
+                <div>
+                    <label for="price" class="block text-sm font-medium text-gray-700 mb-2">Price (₱) *</label>
+                    <input type="number" id="price" required min="0" step="0.01" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent" placeholder="0.00">
+                </div>
+
+                <!-- Upload Fee Notice -->
+                <div class="rounded-lg border-2 border-orange-200 bg-orange-50 p-4">
+                    <div class="flex items-start gap-3">
+                        <svg class="h-5 w-5 text-orange-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                        </svg>
+                        <div>
+                            <h4 class="font-semibold text-gray-900">Upload Fee: ₱1,500</h4>
+                            <p class="mt-1 text-sm text-gray-600">This fee will be deducted from your wallet balance. Your current balance is <span id="currentBalance">₱0</span>.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <button type="submit" id="submitBtn" class="w-full bg-orange-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-orange-700">
+                    Upload Product
+                </button>
+            </form>
+        </div>
+
+        <div id="successMessage" style="display: none;" class="bg-white border border-green-200 rounded-xl p-8 shadow-lg text-center">
+            <div class="flex justify-center mb-4">
+                <div class="h-16 w-16 bg-green-600 rounded-full flex items-center justify-center">
+                    <svg class="h-8 w-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                    </svg>
+                </div>
+            </div>
+            <h2 class="text-2xl font-bold text-gray-900 mb-2">Product Uploaded Successfully!</h2>
+            <p class="text-gray-600 mb-6">Your product is now live on the marketplace. Redirecting...</p>
+            <div class="flex justify-center">
+                <div class="animate-spin h-6 w-6 border-4 border-green-600 border-t-transparent rounded-full"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Load Firebase config
+        let firebaseConfig = null;
+        try {
+            firebaseConfig = JSON.parse(localStorage.getItem('firebaseConfig'));
+        } catch (e) {
+            console.error('Error loading Firebase config:', e);
+        }
+
+        if (!firebaseConfig) {
+            window.location.href = 'config-helper.html';
+        } else {
+            firebase.initializeApp(firebaseConfig);
+            const auth = firebase.auth();
+            const db = firebase.firestore();
+            const storage = firebase.storage();
+            let userData = null;
+            const UPLOAD_FEE = 1500;
+
+            // Image preview
+            document.getElementById('productImage').addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        document.getElementById('previewImg').src = e.target.result;
+                        document.getElementById('imagePreview').classList.remove('hidden');
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+
+            auth.onAuthStateChanged(async (user) => {
+                if (!user) {
+                    window.location.href = 'login.html';
+                    return;
+                }
+
+                const userDoc = await db.collection('users').doc(user.uid).get();
+                userData = { uid: user.uid, ...userDoc.data() };
+                
+                document.getElementById('userName').textContent = userData.name;
+                document.getElementById('walletBalance').textContent = `₱${(userData.walletBalance || 0).toLocaleString()}`;
+                document.getElementById('currentBalance').textContent = `₱${(userData.walletBalance || 0).toLocaleString()}`;
+            });
+
+            async function handleSubmit(e) {
+                e.preventDefault();
+
+                if ((userData.walletBalance || 0) < UPLOAD_FEE) {
+                    alert(`Insufficient Balance. You need ₱${UPLOAD_FEE.toLocaleString()} to upload a product.`);
+                    return;
+                }
+
+                const submitBtn = document.getElementById('submitBtn');
+                submitBtn.disabled = true;
+                submitBtn.textContent = 'Uploading...';
+
+                try {
+                    let imageUrl = '';
+                    const imageFile = document.getElementById('productImage').files[0];
+                    
+                    if (imageFile) {
+                        const storageRef = storage.ref(`products/${userData.uid}/${Date.now()}_${imageFile.name}`);
+                        await storageRef.put(imageFile);
+                        imageUrl = await storageRef.getDownloadURL();
+                    }
+
+                    const productData = {
+                        name: document.getElementById('productName').value,
+                        description: document.getElementById('description').value,
+                        price: parseFloat(document.getElementById('price').value),
+                        imageUrl,
+                        sellerId: userData.uid,
+                        sellerName: userData.name,
+                        status: 'active',
+                        uploadFee: UPLOAD_FEE,
+                        createdAt: new Date().toISOString()
+                    };
+
+                    await db.collection('products').add(productData);
+
+                    // Deduct upload fee
+                    const newBalance = (userData.walletBalance || 0) - UPLOAD_FEE;
+                    await db.collection('users').doc(userData.uid).update({
+                        walletBalance: newBalance
+                    });
+
+                    // Show success
+                    document.getElementById('uploadForm').style.display = 'none';
+                    document.getElementById('successMessage').style.display = 'block';
+
+                    setTimeout(() => {
+                        window.location.href = 'marketplace.html';
+                    }, 2000);
+
+                } catch (error) {
+                    console.error('Error uploading product:', error);
+                    alert('Failed to upload product: ' + error.message);
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Upload Product';
+                }
+            }
+        }
+    </script>
+</body>
+</html>

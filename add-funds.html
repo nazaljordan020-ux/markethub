@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Add Funds - MarketHub</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
+</head>
+<body class="bg-gradient-to-br from-orange-50 via-white to-orange-50 min-h-screen">
+  <header class="sticky top-0 z-50 border-b border-orange-100 bg-white/80 backdrop-blur-md">
+    <div class="container mx-auto flex h-16 items-center justify-between px-4">
+      <a href="seller-dashboard.html" class="flex items-center gap-2">
+        <svg class="h-7 w-7 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
+        </svg>
+        <span class="text-xl font-bold text-gray-900">MarketHub</span>
+      </a>
+      <div class="text-right">
+        <div id="userName" class="text-sm font-medium text-gray-900"></div>
+        <div id="walletBalance" class="text-xs text-gray-600"></div>
+      </div>
+    </div>
+  </header>
+
+  <div class="container mx-auto max-w-2xl px-4 py-8">
+    <a href="seller-dashboard.html" class="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-6">
+      <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+      </svg>
+      Back to Dashboard
+    </a>
+
+    <div class="mb-8">
+      <h1 class="text-3xl font-bold text-gray-900">Add Funds via GCash</h1>
+      <p class="mt-2 text-gray-600">Upload your payment proof for manual verification</p>
+    </div>
+
+    <div id="successMessage" class="hidden rounded-lg border-2 border-green-200 bg-green-50 p-8 text-center">
+      <svg class="mx-auto h-16 w-16 text-green-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+      </svg>
+      <h2 class="text-2xl font-bold text-gray-900 mb-2">Payment Submitted!</h2>
+      <p class="text-gray-600 mb-6">Your GCash payment is pending confirmation. You'll receive funds once approved by the admin.</p>
+      <a href="seller-dashboard.html" class="inline-block bg-orange-600 hover:bg-orange-700 text-white px-6 py-2 rounded-lg">Return to Dashboard</a>
+    </div>
+
+    <form id="paymentForm" class="rounded-lg border border-orange-100 bg-white p-6">
+      <h2 class="text-xl font-bold text-gray-900 mb-2">GCash Payment Details</h2>
+      <p class="text-sm text-gray-600 mb-4">Send to our GCash number and upload proof of payment</p>
+
+      <div class="mb-6 rounded-lg border-2 border-orange-200 bg-orange-50 p-4">
+        <h3 class="font-semibold text-gray-900">Send Payment To:</h3>
+        <p class="mt-2 text-2xl font-bold text-orange-600">0917-123-4567</p>
+        <p class="mt-1 text-sm text-gray-600">Account Name: MarketHub Platform</p>
+      </div>
+
+      <div class="space-y-6">
+        <div>
+          <label for="amount" class="block text-sm font-medium text-gray-700 mb-2">Amount (₱) *</label>
+          <input type="number" id="amount" required min="100" step="0.01" placeholder="0.00"
+            class="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500">
+          <p class="text-sm text-gray-600 mt-1">Minimum: ₱100</p>
+        </div>
+
+        <div>
+          <label for="gcashNumber" class="block text-sm font-medium text-gray-700 mb-2">Your GCash Number *</label>
+          <input type="tel" id="gcashNumber" required placeholder="09XX-XXX-XXXX"
+            class="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500">
+        </div>
+
+        <div>
+          <label for="referenceNumber" class="block text-sm font-medium text-gray-700 mb-2">GCash Reference Number *</label>
+          <input type="text" id="referenceNumber" required placeholder="Enter the reference number from your receipt"
+            class="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500">
+        </div>
+
+        <div>
+          <label for="proofImage" class="block text-sm font-medium text-gray-700 mb-2">Upload Payment Proof *</label>
+          <div id="imagePreview" class="hidden mb-4">
+            <img id="previewImg" class="w-full max-w-md rounded-lg border-2 border-orange-200">
+          </div>
+          <input type="file" id="proofImage" required accept="image/*"
+            class="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500">
+        </div>
+
+        <div class="rounded-lg border border-orange-200 bg-orange-50 p-4">
+          <h4 class="font-semibold text-gray-900">Important:</h4>
+          <ul class="mt-2 space-y-1 text-sm text-gray-700">
+            <li>• Make sure the reference number is clearly visible in the screenshot</li>
+            <li>• Payment will be verified manually by admin</li>
+            <li>• Funds will be added to your wallet once confirmed</li>
+            <li>• Processing time: Usually within 24 hours</li>
+          </ul>
+        </div>
+
+        <button type="submit" id="submitBtn"
+          class="w-full bg-orange-600 hover:bg-orange-700 text-white font-medium py-3 rounded-lg">
+          Submit Payment
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <div id="toast" class="fixed bottom-4 right-4 hidden bg-white border border-gray-200 rounded-lg shadow-lg p-4 max-w-sm">
+    <div id="toastContent"></div>
+  </div>
+
+  <script>
+    const firebaseConfig = JSON.parse(localStorage.getItem('firebaseConfig') || '{}');
+    if (!firebase.apps.length && firebaseConfig.apiKey) {
+      firebase.initializeApp(firebaseConfig);
+    }
+
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+    const storage = firebase.storage();
+    let userData = null;
+
+    function showToast(title, description, variant = 'default') {
+      const toast = document.getElementById('toast');
+      const content = document.getElementById('toastContent');
+      content.innerHTML = `
+        <div class="font-semibold ${variant === 'destructive' ? 'text-red-900' : 'text-gray-900'}">${title}</div>
+        <div class="text-sm ${variant === 'destructive' ? 'text-red-700' : 'text-gray-600'}">${description}</div>
+      `;
+      toast.classList.remove('hidden');
+      setTimeout(() => toast.classList.add('hidden'), 3000);
+    }
+
+    document.getElementById('proofImage').addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          document.getElementById('previewImg').src = e.target.result;
+          document.getElementById('imagePreview').classList.remove('hidden');
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+
+    document.getElementById('paymentForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const amount = parseFloat(document.getElementById('amount').value);
+      const gcashNumber = document.getElementById('gcashNumber').value;
+      const referenceNumber = document.getElementById('referenceNumber').value;
+      const proofImage = document.getElementById('proofImage').files[0];
+
+      if (!proofImage) {
+        showToast('Error', 'Please upload payment proof', 'destructive');
+        return;
+      }
+
+      const submitBtn = document.getElementById('submitBtn');
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = 'Submitting...';
+
+      try {
+        const storageRef = storage.ref(`payment-proofs/${auth.currentUser.uid}/${Date.now()}_${proofImage.name}`);
+        const uploadTask = await storageRef.put(proofImage);
+        const proofImageUrl = await uploadTask.ref.getDownloadURL();
+
+        await db.collection('payments').add({
+          userId: auth.currentUser.uid,
+          userName: userData.name,
+          amount: amount,
+          gcashNumber: gcashNumber,
+          referenceNumber: referenceNumber,
+          proofImageUrl: proofImageUrl,
+          status: 'pending',
+          createdAt: new Date().toISOString()
+        });
+
+        document.getElementById('paymentForm').classList.add('hidden');
+        document.getElementById('successMessage').classList.remove('hidden');
+      } catch (error) {
+        console.error('Error submitting payment:', error);
+        showToast('Error', 'Failed to submit payment', 'destructive');
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = 'Submit Payment';
+      }
+    });
+
+    auth.onAuthStateChanged(async (user) => {
+      if (user) {
+        const userDoc = await db.collection('users').doc(user.uid).get();
+        userData = userDoc.data();
+        
+        document.getElementById('userName').textContent = userData.name;
+        document.getElementById('walletBalance').textContent = `Wallet: ₱${(userData.walletBalance || 0).toLocaleString()}`;
+      } else {
+        window.location.href = 'login.html';
+      }
+    });
+  </script>
+</body>
+</html>

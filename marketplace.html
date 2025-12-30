@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Marketplace - MarketHub</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-orange-50 via-white to-orange-50">
+    <!-- Header -->
+    <header class="sticky top-0 z-50 border-b border-orange-100 bg-white/80 backdrop-blur-md">
+        <div class="container mx-auto flex h-16 items-center justify-between px-4">
+            <a href="dashboard.html" class="flex items-center gap-2">
+                <svg class="h-7 w-7 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
+                </svg>
+                <span class="text-xl font-bold text-gray-900">MarketHub</span>
+            </a>
+            <div class="flex items-center gap-4">
+                <a href="orders.html">
+                    <button class="border border-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm hover:bg-gray-50">
+                        <svg class="inline h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+                        </svg>
+                        My Orders
+                    </button>
+                </a>
+                <button onclick="handleLogout()" class="text-gray-600 hover:text-orange-600">
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <div class="container mx-auto px-4 py-8">
+        <div class="mb-8">
+            <h1 class="text-3xl font-bold text-gray-900">Marketplace</h1>
+            <p class="mt-2 text-gray-600">Browse products from verified sellers</p>
+        </div>
+
+        <div id="products-container" class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            <!-- Products will be loaded here -->
+        </div>
+
+        <div id="loading" class="flex justify-center py-16">
+            <div class="animate-spin h-8 w-8 border-4 border-orange-600 border-t-transparent rounded-full"></div>
+        </div>
+
+        <div id="empty-state" style="display: none;" class="text-center py-16">
+            <svg class="mx-auto h-16 w-16 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+            </svg>
+            <h3 class="text-xl font-semibold text-gray-900">No Products Yet</h3>
+            <p class="mt-2 text-gray-600">Check back soon for new listings!</p>
+        </div>
+    </div>
+
+    <script>
+        // Load Firebase config
+        let firebaseConfig = null;
+        try {
+            firebaseConfig = JSON.parse(localStorage.getItem('firebaseConfig'));
+        } catch (e) {
+            console.error('Error loading Firebase config:', e);
+        }
+
+        if (!firebaseConfig) {
+            window.location.href = 'config-helper.html';
+        } else {
+            firebase.initializeApp(firebaseConfig);
+            const auth = firebase.auth();
+            const db = firebase.firestore();
+
+            auth.onAuthStateChanged(async (user) => {
+                if (!user) {
+                    window.location.href = 'login.html';
+                    return;
+                }
+                loadProducts();
+            });
+
+            async function loadProducts() {
+                try {
+                    const snapshot = await db.collection('products')
+                        .where('status', '==', 'active')
+                        .get();
+
+                    document.getElementById('loading').style.display = 'none';
+
+                    if (snapshot.empty) {
+                        document.getElementById('empty-state').style.display = 'block';
+                        return;
+                    }
+
+                    const container = document.getElementById('products-container');
+                    snapshot.forEach(doc => {
+                        const product = { id: doc.id, ...doc.data() };
+                        const productCard = createProductCard(product);
+                        container.appendChild(productCard);
+                    });
+                } catch (error) {
+                    console.error('Error loading products:', error);
+                }
+            }
+
+            function createProductCard(product) {
+                const card = document.createElement('div');
+                card.className = 'group overflow-hidden border border-orange-100 rounded-xl bg-white transition-shadow hover:shadow-lg';
+                card.innerHTML = `
+                    <div class="aspect-square overflow-hidden bg-gray-100">
+                        ${product.imageUrl ? 
+                            `<img src="${product.imageUrl}" alt="${product.name}" class="h-full w-full object-cover transition-transform group-hover:scale-105">` :
+                            `<div class="flex h-full items-center justify-center">
+                                <svg class="h-16 w-16 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+                                </svg>
+                            </div>`
+                        }
+                    </div>
+                    <div class="p-4">
+                        <h3 class="font-semibold text-gray-900 line-clamp-1 text-lg">${product.name}</h3>
+                        <p class="text-sm text-gray-600 line-clamp-2 mt-1">${product.description}</p>
+                        <div class="mt-3">
+                            <span class="text-2xl font-bold text-orange-600">₱${product.price.toLocaleString()}</span>
+                        </div>
+                        <div class="text-sm text-gray-600 mt-2">
+                            Sold by: <span class="font-medium">${product.sellerName}</span>
+                        </div>
+                        <a href="checkout.html?id=${product.id}">
+                            <button class="w-full mt-3 bg-orange-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-orange-700">
+                                <svg class="inline h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
+                                </svg>
+                                Buy Now
+                            </button>
+                        </a>
+                    </div>
+                `;
+                return card;
+            }
+
+            async function handleLogout() {
+                try {
+                    await auth.signOut();
+                    window.location.href = 'home.html';
+                } catch (error) {
+                    console.error('Error logging out:', error);
+                }
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Payments - MarketHub</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
+</head>
+<body class="bg-gradient-to-br from-orange-50 via-white to-orange-50 min-h-screen">
+  <!-- Header -->
+  <header class="sticky top-0 z-50 border-b border-orange-100 bg-white/80 backdrop-blur-md">
+    <div class="container mx-auto flex h-16 items-center justify-between px-4">
+      <a href="seller-dashboard.html" class="flex items-center gap-2">
+        <svg class="h-7 w-7 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
+        </svg>
+        <span class="text-xl font-bold text-gray-900">MarketHub Admin</span>
+      </a>
+      <div class="text-right">
+        <div id="userName" class="text-sm font-medium text-gray-900"></div>
+        <div class="text-xs text-gray-600">Admin Panel</div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <div class="container mx-auto px-4 py-8">
+    <div class="mb-8">
+      <h1 class="text-3xl font-bold text-gray-900">Payment Review & Code Generation</h1>
+      <p class="mt-2 text-gray-600">Review deposits, approve payments, and generate activation codes</p>
+    </div>
+
+    <div id="paymentsContainer" class="grid gap-6 lg:grid-cols-2"></div>
+    <div id="emptyState" class="hidden">
+      <div class="rounded-lg border border-orange-100 bg-white p-12 text-center">
+        <p class="text-gray-600">No pending payments</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="fixed bottom-4 right-4 hidden bg-white border border-gray-200 rounded-lg shadow-lg p-4 max-w-sm">
+    <div id="toastContent"></div>
+  </div>
+
+  <script>
+    // Firebase config - load from localStorage
+    const firebaseConfig = JSON.parse(localStorage.getItem('firebaseConfig') || '{}');
+    if (!firebase.apps.length && firebaseConfig.apiKey) {
+      firebase.initializeApp(firebaseConfig);
+    }
+
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+    let currentUser = null;
+
+    function showToast(title, description, variant = 'default') {
+      const toast = document.getElementById('toast');
+      const content = document.getElementById('toastContent');
+      content.innerHTML = `
+        <div class="font-semibold ${variant === 'destructive' ? 'text-red-900' : 'text-gray-900'}">${title}</div>
+        <div class="text-sm ${variant === 'destructive' ? 'text-red-700' : 'text-gray-600'}">${description}</div>
+      `;
+      toast.classList.remove('hidden');
+      setTimeout(() => toast.classList.add('hidden'), 3000);
+    }
+
+    async function loadPayments() {
+      try {
+        const snapshot = await db.collection('payments').where('status', '==', 'pending').get();
+        const payments = [];
+        snapshot.forEach(doc => {
+          payments.push({ id: doc.id, ...doc.data() });
+        });
+
+        const container = document.getElementById('paymentsContainer');
+        const emptyState = document.getElementById('emptyState');
+
+        if (payments.length === 0) {
+          container.innerHTML = '';
+          emptyState.classList.remove('hidden');
+        } else {
+          emptyState.classList.add('hidden');
+          container.innerHTML = payments.map(payment => `
+            <div class="rounded-lg border border-orange-100 bg-white p-6">
+              <div class="mb-4">
+                <h3 class="text-lg font-semibold text-gray-900">${payment.userName}</h3>
+                <p class="text-sm text-gray-600">Submitted ${new Date(payment.createdAt).toLocaleString()}</p>
+              </div>
+              <div class="space-y-2 mb-4">
+                <div class="flex justify-between">
+                  <span class="text-gray-600">Amount:</span>
+                  <span class="font-bold text-gray-900">₱${payment.amount.toLocaleString()}</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-gray-600">GCash Number:</span>
+                  <span class="font-medium text-gray-900">${payment.gcashNumber}</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-gray-600">Reference:</span>
+                  <span class="font-medium text-gray-900">${payment.referenceNumber}</span>
+                </div>
+                ${payment.activationCode ? `
+                  <div class="flex justify-between rounded-lg border border-green-200 bg-green-50 p-3">
+                    <span class="text-gray-600">Activation Code:</span>
+                    <span class="font-mono text-lg font-bold text-green-600">${payment.activationCode}</span>
+                  </div>
+                ` : ''}
+              </div>
+              <div class="mb-4">
+                <p class="text-sm font-medium text-gray-700 mb-2">Payment Proof:</p>
+                <a href="${payment.proofImageUrl}" target="_blank" class="block overflow-hidden rounded-lg border border-orange-200">
+                  <img src="${payment.proofImageUrl}" alt="Payment proof" class="h-64 w-full object-contain bg-gray-50">
+                </a>
+              </div>
+              ${payment.status === 'confirmed' ? `
+                <div class="bg-green-600 text-white text-center py-2 rounded-lg mb-3">Payment Confirmed</div>
+                ${!payment.activationCode ? `
+                  <button onclick="generateCode('${payment.id}', '${payment.userId}')" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg">
+                    Generate Activation Code
+                  </button>
+                ` : ''}
+              ` : `
+                <div class="flex gap-3">
+                  <button onclick="rejectPayment('${payment.id}')" class="flex-1 border border-red-200 text-red-600 hover:bg-red-50 py-2 rounded-lg">
+                    Reject
+                  </button>
+                  <button onclick="confirmPayment('${payment.id}')" class="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg">
+                    Confirm
+                  </button>
+                </div>
+              `}
+            </div>
+          `).join('');
+        }
+      } catch (error) {
+        console.error('Error loading payments:', error);
+        showToast('Error', 'Failed to load payments', 'destructive');
+      }
+    }
+
+    async function confirmPayment(paymentId) {
+      try {
+        const paymentRef = db.collection('payments').doc(paymentId);
+        const payment = await paymentRef.get();
+        const paymentData = payment.data();
+
+        await paymentRef.update({
+          status: 'confirmed',
+          confirmedAt: new Date().toISOString(),
+          confirmedBy: currentUser.uid
+        });
+
+        const userRef = db.collection('users').doc(paymentData.userId);
+        const userDoc = await userRef.get();
+        const userData = userDoc.data();
+        const currentBalance = userData.walletBalance || 0;
+
+        await userRef.update({
+          walletBalance: currentBalance + paymentData.amount
+        });
+
+        showToast('Payment Confirmed', 'Funds have been added to the seller\'s wallet');
+        loadPayments();
+      } catch (error) {
+        console.error('Error confirming payment:', error);
+        showToast('Error', 'Failed to confirm payment', 'destructive');
+      }
+    }
+
+    async function rejectPayment(paymentId) {
+      const reason = prompt('Enter rejection reason:');
+      if (!reason) return;
+
+      try {
+        await db.collection('payments').doc(paymentId).update({
+          status: 'rejected',
+          rejectionReason: reason,
+          rejectedAt: new Date().toISOString()
+        });
+
+        showToast('Payment Rejected', 'The payment has been marked as rejected');
+        loadPayments();
+      } catch (error) {
+        console.error('Error rejecting payment:', error);
+        showToast('Error', 'Failed to reject payment', 'destructive');
+      }
+    }
+
+    async function generateCode(paymentId, userId) {
+      try {
+        const code = Math.random().toString(36).substring(2, 8).toUpperCase();
+        
+        await db.collection('payments').doc(paymentId).update({
+          activationCode: code,
+          codeGeneratedAt: new Date().toISOString(),
+          codeGeneratedBy: currentUser.uid
+        });
+
+        showToast('Activation Code Generated', `Code ${code} has been generated`);
+        loadPayments();
+      } catch (error) {
+        console.error('Error generating code:', error);
+        showToast('Error', 'Failed to generate activation code', 'destructive');
+      }
+    }
+
+    auth.onAuthStateChanged(async (user) => {
+      if (user) {
+        currentUser = user;
+        const userDoc = await db.collection('users').doc(user.uid).get();
+        const userData = userDoc.data();
+        
+        if (userData.role !== 'admin' && userData.role !== 'supplier') {
+          window.location.href = 'seller-dashboard.html';
+          return;
+        }
+
+        document.getElementById('userName').textContent = userData.name;
+        loadPayments();
+      } else {
+        window.location.href = 'login.html';
+      }
+    });
+  </script>
+</body>
+</html>

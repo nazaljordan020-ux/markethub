@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Checkout - MarketHub</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-orange-50 via-white to-orange-50">
+    <header class="sticky top-0 z-50 border-b border-orange-100 bg-white/80 backdrop-blur-md">
+        <div class="container mx-auto flex h-16 items-center justify-between px-4">
+            <a href="marketplace.html" class="flex items-center gap-2">
+                <svg class="h-7 w-7 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
+                </svg>
+                <span class="text-xl font-bold text-gray-900">MarketHub</span>
+            </a>
+        </div>
+    </header>
+
+    <div class="container mx-auto max-w-4xl px-4 py-8">
+        <div class="mb-6">
+            <a href="marketplace.html">
+                <button class="text-gray-600 hover:text-gray-900 flex items-center gap-2">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                    </svg>
+                    Back to Marketplace
+                </button>
+            </a>
+        </div>
+
+        <div id="loading" class="flex justify-center py-16">
+            <div class="animate-spin h-8 w-8 border-4 border-orange-600 border-t-transparent rounded-full"></div>
+        </div>
+
+        <div id="checkout-content" style="display: none;">
+            <div class="grid gap-6 lg:grid-cols-2">
+                <!-- Product Summary -->
+                <div class="bg-white border border-orange-100 rounded-xl p-6">
+                    <h2 class="text-xl font-bold text-gray-900 mb-4">Order Summary</h2>
+                    <div id="product-summary"></div>
+                </div>
+
+                <!-- Checkout Form -->
+                <form onsubmit="handleCheckout(event)" class="space-y-6">
+                    <div class="bg-white border border-orange-100 rounded-xl p-6">
+                        <h2 class="text-xl font-bold text-gray-900 mb-4">Shipping Address</h2>
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Full Name *</label>
+                                <input type="text" id="fullName" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Phone Number *</label>
+                                <input type="tel" id="phone" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Street Address *</label>
+                                <textarea id="address" required rows="2" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"></textarea>
+                            </div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">City *</label>
+                                    <input type="text" id="city" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Province *</label>
+                                    <input type="text" id="province" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white border border-orange-100 rounded-xl p-6">
+                        <h2 class="text-xl font-bold text-gray-900 mb-4">Payment Method</h2>
+                        <div class="space-y-3">
+                            <label class="flex items-start gap-3 p-4 border border-orange-200 rounded-lg cursor-pointer hover:bg-orange-50">
+                                <input type="radio" name="paymentMethod" value="cod" checked class="mt-1">
+                                <div>
+                                    <div class="font-semibold text-gray-900">Cash on Delivery (COD)</div>
+                                    <div class="text-sm text-gray-600">Pay with cash when your order is delivered</div>
+                                </div>
+                            </label>
+                            <label class="flex items-start gap-3 p-4 border border-orange-200 rounded-lg cursor-pointer hover:bg-orange-50">
+                                <input type="radio" name="paymentMethod" value="wallet" class="mt-1">
+                                <div>
+                                    <div class="font-semibold text-gray-900">Wallet Payment</div>
+                                    <div class="text-sm text-gray-600">Pay using your wallet balance</div>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <button type="submit" id="submitBtn" class="w-full bg-orange-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-orange-700">
+                        Place Order
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <div id="success-message" style="display: none;" class="max-w-md mx-auto bg-white border border-green-200 rounded-xl p-8 text-center">
+            <div class="flex justify-center mb-4">
+                <div class="h-16 w-16 bg-green-600 rounded-full flex items-center justify-center">
+                    <svg class="h-8 w-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                    </svg>
+                </div>
+            </div>
+            <h2 class="text-2xl font-bold text-gray-900 mb-2">Order Placed Successfully!</h2>
+            <p class="text-gray-600 mb-6">Your order has been placed. Redirecting to orders page...</p>
+            <div class="flex justify-center">
+                <div class="animate-spin h-6 w-6 border-4 border-green-600 border-t-transparent rounded-full"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Load Firebase config
+        let firebaseConfig = null;
+        try {
+            firebaseConfig = JSON.parse(localStorage.getItem('firebaseConfig'));
+        } catch (e) {
+            console.error('Error loading Firebase config:', e);
+        }
+
+        if (!firebaseConfig) {
+            window.location.href = 'config-helper.html';
+        } else {
+            firebase.initializeApp(firebaseConfig);
+            const auth = firebase.auth();
+            const db = firebase.firestore();
+            let currentProduct = null;
+            let userData = null;
+
+            const urlParams = new URLSearchParams(window.location.search);
+            const productId = urlParams.get('id');
+
+            auth.onAuthStateChanged(async (user) => {
+                if (!user) {
+                    window.location.href = 'login.html';
+                    return;
+                }
+
+                const userDoc = await db.collection('users').doc(user.uid).get();
+                userData = { uid: user.uid, ...userDoc.data() };
+
+                if (productId) {
+                    await loadProduct(productId);
+                }
+            });
+
+            async function loadProduct(productId) {
+                try {
+                    const productDoc = await db.collection('products').doc(productId).get();
+                    if (!productDoc.exists) {
+                        alert('Product not found');
+                        window.location.href = 'marketplace.html';
+                        return;
+                    }
+
+                    currentProduct = { id: productDoc.id, ...productDoc.data() };
+                    
+                    document.getElementById('product-summary').innerHTML = `
+                        <div class="flex gap-4 mb-4">
+                            <div class="h-24 w-24 flex-shrink-0 rounded-lg bg-gray-100 overflow-hidden">
+                                ${currentProduct.imageUrl ? 
+                                    `<img src="${currentProduct.imageUrl}" alt="${currentProduct.name}" class="h-full w-full object-cover">` :
+                                    '<div class="h-full w-full flex items-center justify-center"><svg class="h-8 w-8 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg></div>'
+                                }
+                            </div>
+                            <div class="flex-1">
+                                <h3 class="font-semibold text-gray-900">${currentProduct.name}</h3>
+                                <p class="text-sm text-gray-600 line-clamp-2 mt-1">${currentProduct.description}</p>
+                                <p class="text-lg font-bold text-orange-600 mt-2">₱${currentProduct.price.toLocaleString()}</p>
+                            </div>
+                        </div>
+                        <div class="border-t border-gray-200 pt-4 space-y-2">
+                            <div class="flex justify-between text-sm">
+                                <span class="text-gray-600">Subtotal</span>
+                                <span class="font-medium">₱${currentProduct.price.toLocaleString()}</span>
+                            </div>
+                            <div class="flex justify-between text-sm">
+                                <span class="text-gray-600">Shipping</span>
+                                <span class="font-medium">FREE</span>
+                            </div>
+                            <div class="flex justify-between border-t border-gray-200 pt-2">
+                                <span class="font-semibold text-gray-900">Total</span>
+                                <span class="text-xl font-bold text-orange-600">₱${currentProduct.price.toLocaleString()}</span>
+                            </div>
+                        </div>
+                    `;
+
+                    document.getElementById('loading').style.display = 'none';
+                    document.getElementById('checkout-content').style.display = 'block';
+                } catch (error) {
+                    console.error('Error loading product:', error);
+                    alert('Error loading product');
+                }
+            }
+
+            async function handleCheckout(e) {
+                e.preventDefault();
+
+                const submitBtn = document.getElementById('submitBtn');
+                submitBtn.disabled = true;
+                submitBtn.textContent = 'Processing...';
+
+                try {
+                    const paymentMethod = document.querySelector('input[name="paymentMethod"]:checked').value;
+
+                    const orderData = {
+                        productId: currentProduct.id,
+                        productName: currentProduct.name,
+                        productPrice: currentProduct.price,
+                        productImage: currentProduct.imageUrl,
+                        sellerId: currentProduct.sellerId,
+                        sellerName: currentProduct.sellerName,
+                        buyerId: userData.uid,
+                        buyerName: userData.name,
+                        paymentMethod,
+                        shippingAddress: {
+                            fullName: document.getElementById('fullName').value,
+                            phone: document.getElementById('phone').value,
+                            address: document.getElementById('address').value,
+                            city: document.getElementById('city').value,
+                            province: document.getElementById('province').value
+                        },
+                        status: paymentMethod === 'wallet' ? 'paid' : 'pending_payment',
+                        createdAt: new Date().toISOString()
+                    };
+
+                    await db.collection('orders').add(orderData);
+
+                    if (paymentMethod === 'wallet') {
+                        await db.collection('users').doc(userData.uid).update({
+                            walletBalance: firebase.firestore.FieldValue.increment(-currentProduct.price)
+                        });
+
+                        await db.collection('users').doc(currentProduct.sellerId).update({
+                            walletBalance: firebase.firestore.FieldValue.increment(currentProduct.price * 0.9)
+                        });
+                    }
+
+                    document.getElementById('checkout-content').style.display = 'none';
+                    document.getElementById('success-message').style.display = 'block';
+
+                    setTimeout(() => {
+                        window.location.href = 'orders.html';
+                    }, 3000);
+
+                } catch (error) {
+                    console.error('Error placing order:', error);
+                    alert('Error placing order: ' + error.message);
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Place Order';
+                }
+            }
+        }
+    </script>
+</body>
+</html>

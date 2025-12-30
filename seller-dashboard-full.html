@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Seller Dashboard - MarketHub</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
+  <style>
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .animate-spin { animation: spin 1s linear infinite; }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-orange-50 via-white to-orange-50 min-h-screen">
+  
+  <!-- Header -->
+  <header class="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-orange-100">
+    <div class="container mx-auto px-4 h-16 flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <svg class="h-7 w-7 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
+        </svg>
+        <span class="text-xl font-bold text-gray-900">MarketHub</span>
+      </div>
+      <div class="flex items-center gap-4">
+        <div class="text-right">
+          <div class="text-sm font-medium text-gray-900" id="userName">Loading...</div>
+          <div class="text-xs text-gray-600">Seller Account</div>
+        </div>
+        <button onclick="handleLogout()" class="p-2 hover:bg-gray-100 rounded-lg">
+          <svg class="h-5 w-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <div class="container mx-auto px-4 py-8">
+    <!-- Welcome Section -->
+    <div class="mb-8">
+      <h1 class="text-3xl font-bold text-gray-900">Welcome back, <span id="welcomeName">Seller</span>!</h1>
+      <p class="mt-2 text-gray-600">Here's what's happening with your marketplace today</p>
+    </div>
+
+    <!-- Stats Grid -->
+    <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-8">
+      <!-- Wallet Balance -->
+      <div class="bg-gradient-to-br from-orange-50 to-white border border-orange-100 rounded-lg p-6">
+        <div class="flex justify-between items-center mb-2">
+          <div class="text-sm font-medium text-gray-600">Wallet Balance</div>
+          <svg class="h-4 w-4 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
+          </svg>
+        </div>
+        <div class="text-2xl font-bold text-gray-900">₱<span id="walletBalance">0</span></div>
+        <p class="text-xs text-gray-600 mt-1">Available for withdrawal</p>
+      </div>
+
+      <!-- My Products -->
+      <div class="bg-white border border-orange-100 rounded-lg p-6">
+        <div class="flex justify-between items-center mb-2">
+          <div class="text-sm font-medium text-gray-600">My Products</div>
+          <svg class="h-4 w-4 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+          </svg>
+        </div>
+        <div class="text-2xl font-bold text-gray-900"><span id="totalProducts">0</span></div>
+        <p class="text-xs text-green-600 mt-1"><span id="activeProducts">0</span> active</p>
+      </div>
+
+      <!-- Total Commissions -->
+      <div class="bg-white border border-orange-100 rounded-lg p-6">
+        <div class="flex justify-between items-center mb-2">
+          <div class="text-sm font-medium text-gray-600">Total Commissions</div>
+          <svg class="h-4 w-4 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
+          </svg>
+        </div>
+        <div class="text-2xl font-bold text-gray-900">₱<span id="totalCommissions">0</span></div>
+        <p class="text-xs text-gray-600 mt-1">All time earnings</p>
+      </div>
+
+      <!-- Network Size -->
+      <div class="bg-white border border-orange-100 rounded-lg p-6">
+        <div class="flex justify-between items-center mb-2">
+          <div class="text-sm font-medium text-gray-600">Network Size</div>
+          <svg class="h-4 w-4 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+          </svg>
+        </div>
+        <div class="text-2xl font-bold text-gray-900"><span id="networkSize">0</span></div>
+        <p class="text-xs text-gray-600 mt-1">Direct downline</p>
+      </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="flex flex-wrap gap-4 mb-8">
+      <a href="upload-product.html" class="inline-flex items-center gap-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700">
+        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+        </svg>
+        Upload Product
+      </a>
+      <a href="marketplace.html" class="inline-flex items-center gap-2 px-4 py-2 border border-orange-300 rounded-lg hover:bg-orange-50">
+        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
+        </svg>
+        Browse Marketplace
+      </a>
+      <a href="add-funds.html" class="inline-flex items-center gap-2 px-4 py-2 border border-orange-300 rounded-lg hover:bg-orange-50">
+        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
+        </svg>
+        Add Funds (GCash)
+      </a>
+      <a href="withdraw.html" class="inline-flex items-center gap-2 px-4 py-2 border border-orange-300 rounded-lg hover:bg-orange-50">
+        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
+        </svg>
+        Withdraw Funds
+      </a>
+    </div>
+
+    <!-- Tabs -->
+    <div class="space-y-6">
+      <!-- Tab Headers -->
+      <div class="bg-white rounded-lg p-1 inline-flex gap-1">
+        <button onclick="switchTab('products')" id="tab-products" class="px-4 py-2 rounded-lg bg-orange-100 text-orange-600 font-medium">
+          Products
+        </button>
+        <button onclick="switchTab('network')" id="tab-network" class="px-4 py-2 rounded-lg text-gray-600 hover:bg-gray-100">
+          Network
+        </button>
+        <button onclick="switchTab('commissions')" id="tab-commissions" class="px-4 py-2 rounded-lg text-gray-600 hover:bg-gray-100">
+          Commissions
+        </button>
+      </div>
+
+      <!-- Tab Content: Products -->
+      <div id="content-products" class="space-y-4">
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="text-2xl font-bold text-gray-900">My Products</h2>
+            <p class="text-gray-600 mt-1">Manage your product listings</p>
+          </div>
+        </div>
+        <div id="productsList" class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          <div class="text-center text-gray-600 py-12">Loading products...</div>
+        </div>
+      </div>
+
+      <!-- Tab Content: Network -->
+      <div id="content-network" class="space-y-4 hidden">
+        <div>
+          <h2 class="text-2xl font-bold text-gray-900">My Network</h2>
+          <p class="text-gray-600 mt-1">Binary tree visualization</p>
+        </div>
+        <div id="networkTree" class="bg-white border border-orange-100 rounded-lg p-6">
+          <div class="text-center text-gray-600">Loading network...</div>
+        </div>
+      </div>
+
+      <!-- Tab Content: Commissions -->
+      <div id="content-commissions" class="space-y-4 hidden">
+        <div>
+          <h2 class="text-2xl font-bold text-gray-900">Commission History</h2>
+          <p class="text-gray-600 mt-1">Track your earnings and payouts</p>
+        </div>
+        <div id="commissionsList" class="bg-white border border-orange-100 rounded-lg p-6">
+          <div class="text-center text-gray-600">Loading commissions...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Firebase configuration from localStorage
+    const firebaseConfig = JSON.parse(localStorage.getItem('firebaseConfig') || '{}');
+    
+    if (!firebaseConfig.apiKey) {
+      window.location.href = 'config-helper.html';
+    }
+
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+    const storage = firebase.storage();
+
+    let currentUser = null;
+    let userData = null;
+
+    // Check authentication
+    auth.onAuthStateChanged(async (user) => {
+      if (!user) {
+        window.location.href = 'login.html';
+        return;
+      }
+
+      currentUser = user;
+      await loadUserData();
+      await loadDashboardData();
+    });
+
+    async function loadUserData() {
+      try {
+        const userDoc = await db.collection('users').doc(currentUser.uid).get();
+        if (userDoc.exists) {
+          userData = { uid: userDoc.id, ...userDoc.data() };
+          document.getElementById('userName').textContent = userData.name;
+          document.getElementById('welcomeName').textContent = userData.name;
+          document.getElementById('walletBalance').textContent = (userData.walletBalance || 0).toLocaleString();
+        }
+      } catch (error) {
+        console.error('Error loading user data:', error);
+      }
+    }
+
+    async function loadDashboardData() {
+      try {
+        // Load products
+        const productsSnapshot = await db.collection('products')
+          .where('sellerId', '==', currentUser.uid)
+          .get();
+        
+        const activeProducts = productsSnapshot.docs.filter(doc => doc.data().status === 'active');
+        document.getElementById('totalProducts').textContent = productsSnapshot.size;
+        document.getElementById('activeProducts').textContent = activeProducts.length;
+
+        // Load downline
+        const downlineSnapshot = await db.collection('users')
+          .where('parentId', '==', currentUser.uid)
+          .get();
+        document.getElementById('networkSize').textContent = downlineSnapshot.size;
+
+        // Load commissions
+        const commissionsSnapshot = await db.collection('commissions')
+          .where('sellerId', '==', currentUser.uid)
+          .get();
+        
+        const totalCommissions = commissionsSnapshot.docs.reduce((sum, doc) => {
+          return sum + (doc.data().amount || 0);
+        }, 0);
+        document.getElementById('totalCommissions').textContent = totalCommissions.toLocaleString();
+
+        // Load products list
+        loadProductsList(productsSnapshot);
+        
+        // Load commissions list
+        loadCommissionsList(commissionsSnapshot);
+
+        // Load network tree
+        loadNetworkTree();
+      } catch (error) {
+        console.error('Error loading dashboard data:', error);
+      }
+    }
+
+    function loadProductsList(snapshot) {
+      const container = document.getElementById('productsList');
+      if (snapshot.empty) {
+        container.innerHTML = `
+          <div class="col-span-full text-center py-12">
+            <svg class="h-12 w-12 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+            </svg>
+            <h3 class="text-lg font-semibold text-gray-900">No products yet</h3>
+            <p class="text-gray-600 mt-2">Upload your first product to start selling</p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = snapshot.docs.map(doc => {
+        const product = doc.data();
+        return `
+          <div class="bg-white border border-orange-100 rounded-lg overflow-hidden hover:shadow-lg transition-shadow">
+            <div class="aspect-square bg-gradient-to-br from-orange-100 to-orange-50 flex items-center justify-center">
+              ${product.imageUrl ? 
+                `<img src="${product.imageUrl}" alt="${product.name}" class="w-full h-full object-cover">` :
+                `<svg class="h-16 w-16 text-orange-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+                </svg>`
+              }
+            </div>
+            <div class="p-4">
+              <h3 class="font-semibold text-gray-900">${product.name}</h3>
+              <p class="text-sm text-gray-600 mt-1 line-clamp-2">${product.description}</p>
+              <div class="flex items-center justify-between mt-3">
+                <div class="text-xl font-bold text-gray-900">₱${product.price.toLocaleString()}</div>
+                <span class="px-2 py-1 text-xs rounded ${product.status === 'active' ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-600'}">
+                  ${product.status}
+                </span>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function loadCommissionsList(snapshot) {
+      const container = document.getElementById('commissionsList');
+      if (snapshot.empty) {
+        container.innerHTML = `
+          <div class="text-center py-12">
+            <svg class="h-12 w-12 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+            </svg>
+            <h3 class="text-lg font-semibold text-gray-900">No commissions yet</h3>
+            <p class="text-gray-600 mt-2">Start building your network to earn matching commissions</p>
+          </div>
+        `;
+        return;
+      }
+
+      const commissions = snapshot.docs
+        .map(doc => ({ id: doc.id, ...doc.data() }))
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+      container.innerHTML = `
+        <div class="space-y-4">
+          ${commissions.map(commission => `
+            <div class="flex items-center justify-between border border-orange-100 rounded-lg p-4">
+              <div class="flex items-center gap-4">
+                <div class="flex h-10 w-10 items-center justify-center rounded-full bg-green-100">
+                  <svg class="h-5 w-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
+                  </svg>
+                </div>
+                <div>
+                  <div class="font-semibold text-gray-900">Matching Commission</div>
+                  <div class="text-sm text-gray-600">${new Date(commission.createdAt).toLocaleDateString()}</div>
+                </div>
+              </div>
+              <div class="text-right">
+                <div class="text-lg font-bold text-green-600">+₱${commission.amount.toLocaleString()}</div>
+                <div class="text-xs ${commission.status === 'paid' ? 'text-green-600' : 'text-orange-600'}">
+                  ${commission.status}
+                </div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      `;
+    }
+
+    async function loadNetworkTree() {
+      const container = document.getElementById('networkTree');
+      try {
+        const downlineSnapshot = await db.collection('users')
+          .where('parentId', '==', currentUser.uid)
+          .get();
+
+        if (downlineSnapshot.empty) {
+          container.innerHTML = `
+            <div class="text-center py-12">
+              <svg class="h-12 w-12 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+              </svg>
+              <h3 class="text-lg font-semibold text-gray-900">No downline yet</h3>
+              <p class="text-gray-600 mt-2">Share your referral link to build your network</p>
+            </div>
+          `;
+          return;
+        }
+
+        const downlineUsers = downlineSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        const positionA = downlineUsers.find(u => u.positionInTree === 'A');
+        const positionB = downlineUsers.find(u => u.positionInTree === 'B');
+
+        container.innerHTML = `
+          <div class="flex flex-col items-center space-y-8">
+            <div class="bg-orange-100 rounded-lg p-4 text-center">
+              <div class="font-semibold text-gray-900">${userData.name}</div>
+              <div class="text-sm text-gray-600">(You)</div>
+            </div>
+            <div class="grid grid-cols-2 gap-12">
+              <div class="text-center">
+                <div class="text-sm font-medium text-gray-600 mb-2">Position A</div>
+                ${positionA ? `
+                  <div class="bg-green-100 rounded-lg p-4">
+                    <div class="font-semibold text-gray-900">${positionA.name}</div>
+                    <div class="text-sm text-gray-600">${positionA.email}</div>
+                  </div>
+                ` : `
+                  <div class="bg-gray-100 rounded-lg p-4 border-2 border-dashed border-gray-300">
+                    <div class="text-gray-500">Empty</div>
+                  </div>
+                `}
+              </div>
+              <div class="text-center">
+                <div class="text-sm font-medium text-gray-600 mb-2">Position B</div>
+                ${positionB ? `
+                  <div class="bg-blue-100 rounded-lg p-4">
+                    <div class="font-semibold text-gray-900">${positionB.name}</div>
+                    <div class="text-sm text-gray-600">${positionB.email}</div>
+                  </div>
+                ` : `
+                  <div class="bg-gray-100 rounded-lg p-4 border-2 border-dashed border-gray-300">
+                    <div class="text-gray-500">Empty</div>
+                  </div>
+                `}
+              </div>
+            </div>
+          </div>
+        `;
+      } catch (error) {
+        console.error('Error loading network tree:', error);
+        container.innerHTML = '<div class="text-center text-red-600">Error loading network</div>';
+      }
+    }
+
+    function switchTab(tab) {
+      // Update tab buttons
+      ['products', 'network', 'commissions'].forEach(t => {
+        const btn = document.getElementById(`tab-${t}`);
+        const content = document.getElementById(`content-${t}`);
+        if (t === tab) {
+          btn.className = 'px-4 py-2 rounded-lg bg-orange-100 text-orange-600 font-medium';
+          content.classList.remove('hidden');
+        } else {
+          btn.className = 'px-4 py-2 rounded-lg text-gray-600 hover:bg-gray-100';
+          content.classList.add('hidden');
+        }
+      });
+    }
+
+    async function handleLogout() {
+      try {
+        await auth.signOut();
+        window.location.href = 'login.html';
+      } catch (error) {
+        console.error('Error signing out:', error);
+        alert('Failed to sign out');
+      }
+    }
+  </script>
+</body>
+</html>

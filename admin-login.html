@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Login - MarketHub</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
+    <div class="container mx-auto flex min-h-screen items-center justify-center px-4 py-12">
+        <div class="w-full max-w-md">
+            <div class="mb-8 text-center">
+                <div class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-orange-500 to-red-600 shadow-lg">
+                    <svg class="h-8 w-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                    </svg>
+                </div>
+                <h1 class="mt-4 text-3xl font-bold text-white">Admin Access</h1>
+                <p class="mt-2 text-gray-400">Developer & Administrator Login</p>
+            </div>
+
+            <div class="rounded-xl border border-gray-700 bg-gray-800/50 p-8 shadow-2xl backdrop-blur">
+                <form onsubmit="handleLogin(event)" class="space-y-6">
+                    <div id="errorMessage" style="display: none;" class="flex items-center gap-2 rounded-lg bg-red-900/50 border border-red-700 p-3 text-sm text-red-200">
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        <span id="errorText"></span>
+                    </div>
+
+                    <div class="space-y-2">
+                        <label for="email" class="text-gray-300 text-sm font-medium">Admin Email</label>
+                        <div class="relative">
+                            <svg class="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207"/>
+                            </svg>
+                            <input type="email" id="email" required class="w-full pl-10 pr-4 py-2 bg-gray-900/50 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:ring-2 focus:ring-orange-500 focus:border-transparent" placeholder="admin@example.com">
+                        </div>
+                    </div>
+
+                    <div class="space-y-2">
+                        <label for="password" class="text-gray-300 text-sm font-medium">Password</label>
+                        <div class="relative">
+                            <svg class="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                            </svg>
+                            <input type="password" id="password" required class="w-full pl-10 pr-4 py-2 bg-gray-900/50 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:ring-2 focus:ring-orange-500 focus:border-transparent" placeholder="Enter admin password">
+                        </div>
+                    </div>
+
+                    <button type="submit" id="loginBtn" class="w-full bg-gradient-to-r from-orange-600 to-red-600 text-white font-semibold py-3 rounded-lg hover:from-orange-700 hover:to-red-700 transition">
+                        Sign In as Admin
+                    </button>
+                </form>
+
+                <div class="mt-6 rounded-lg bg-gray-900/50 border border-gray-700 p-4">
+                    <p class="text-xs text-gray-400 text-center">
+                        <svg class="inline h-3 w-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                        </svg>
+                        Restricted access. Only authorized administrators can login here.
+                    </p>
+                </div>
+            </div>
+
+            <div class="mt-6 text-center">
+                <a href="home.html" class="text-sm text-gray-400 hover:text-white transition-colors">
+                    ← Back to homepage
+                </a>
+            </div>
+
+            <p class="mt-8 text-center text-xs text-gray-500">Secured by Firebase Authentication • SSL Encrypted</p>
+        </div>
+    </div>
+
+    <script>
+        // Load Firebase config
+        let firebaseConfig = null;
+        try {
+            firebaseConfig = JSON.parse(localStorage.getItem('firebaseConfig'));
+        } catch (e) {
+            console.error('Error loading Firebase config:', e);
+        }
+
+        if (!firebaseConfig) {
+            window.location.href = 'config-helper.html';
+        } else {
+            firebase.initializeApp(firebaseConfig);
+            const auth = firebase.auth();
+
+            async function handleLogin(e) {
+                e.preventDefault();
+
+                const email = document.getElementById('email').value;
+                const password = document.getElementById('password').value;
+                const loginBtn = document.getElementById('loginBtn');
+                const errorMessage = document.getElementById('errorMessage');
+                const errorText = document.getElementById('errorText');
+
+                loginBtn.disabled = true;
+                loginBtn.textContent = 'Authenticating...';
+                errorMessage.style.display = 'none';
+
+                try {
+                    if (email.toLowerCase() === 'josias.nazal@gmail.com') {
+                        await auth.signInWithEmailAndPassword(email, password);
+                        window.location.href = 'dashboard.html';
+                    } else {
+                        errorText.textContent = 'Access denied. Only administrator email is allowed.';
+                        errorMessage.style.display = 'flex';
+                        loginBtn.disabled = false;
+                        loginBtn.textContent = 'Sign In as Admin';
+                    }
+                } catch (error) {
+                    errorText.textContent = error.message || 'Failed to sign in';
+                    errorMessage.style.display = 'flex';
+                    loginBtn.disabled = false;
+                    loginBtn.textContent = 'Sign In as Admin';
+                }
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Firebase Configuration - MarketHub</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 min-h-screen py-12 px-4">
+  <div class="max-w-2xl mx-auto bg-white rounded-lg shadow-lg p-8">
+    <h1 class="text-3xl font-bold text-gray-900 mb-6">Firebase Configuration</h1>
+    <p class="text-gray-600 mb-6">Enter your Firebase project credentials below. These will be saved in your browser's local storage.</p>
+
+    <form id="configForm" class="space-y-4">
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-2">API Key</label>
+        <input type="text" id="apiKey" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500">
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-2">Auth Domain</label>
+        <input type="text" id="authDomain" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500">
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-2">Project ID</label>
+        <input type="text" id="projectId" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500">
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-2">Storage Bucket</label>
+        <input type="text" id="storageBucket" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500">
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-2">Messaging Sender ID</label>
+        <input type="text" id="messagingSenderId" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500">
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-2">App ID</label>
+        <input type="text" id="appId" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500">
+      </div>
+
+      <button type="submit" class="w-full bg-orange-500 text-white py-3 rounded-lg font-semibold hover:bg-orange-600 transition">
+        Save Configuration
+      </button>
+    </form>
+
+    <div id="successMessage" class="hidden mt-4 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg">
+      Configuration saved successfully! You can now use the app.
+    </div>
+
+    <div class="mt-8 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+      <h3 class="font-semibold text-blue-900 mb-2">How to get Firebase credentials:</h3>
+      <ol class="list-decimal list-inside text-sm text-blue-800 space-y-1">
+        <li>Go to <a href="https://console.firebase.google.com/" target="_blank" class="underline">Firebase Console</a></li>
+        <li>Create or select your project</li>
+        <li>Click on the gear icon → Project settings</li>
+        <li>Scroll down to "Your apps" section</li>
+        <li>Click on the web app icon (&lt;/&gt;)</li>
+        <li>Copy the config values and paste them above</li>
+        <li>Enable Authentication (Email/Password) in Firebase Console</li>
+        <li>Create a Firestore Database in Firebase Console</li>
+        <li>Enable Firebase Storage in Firebase Console</li>
+      </ol>
+    </div>
+
+    <div class="mt-4 text-center">
+      <a href="index.html" class="text-orange-500 hover:underline">← Back to Home</a>
+    </div>
+  </div>
+
+  <script>
+    // Load existing config
+    document.getElementById('apiKey').value = localStorage.getItem('firebase_api_key') || '';
+    document.getElementById('authDomain').value = localStorage.getItem('firebase_auth_domain') || '';
+    document.getElementById('projectId').value = localStorage.getItem('firebase_project_id') || '';
+    document.getElementById('storageBucket').value = localStorage.getItem('firebase_storage_bucket') || '';
+    document.getElementById('messagingSenderId').value = localStorage.getItem('firebase_messaging_sender_id') || '';
+    document.getElementById('appId').value = localStorage.getItem('firebase_app_id') || '';
+
+    document.getElementById('configForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      
+      localStorage.setItem('firebase_api_key', document.getElementById('apiKey').value);
+      localStorage.setItem('firebase_auth_domain', document.getElementById('authDomain').value);
+      localStorage.setItem('firebase_project_id', document.getElementById('projectId').value);
+      localStorage.setItem('firebase_storage_bucket', document.getElementById('storageBucket').value);
+      localStorage.setItem('firebase_messaging_sender_id', document.getElementById('messagingSenderId').value);
+      localStorage.setItem('firebase_app_id', document.getElementById('appId').value);
+
+      document.getElementById('successMessage').classList.remove('hidden');
+      
+      setTimeout(() => {
+        window.location.href = 'index.html';
+      }, 2000);
+    });
+  </script>
+</body>
+</html>
