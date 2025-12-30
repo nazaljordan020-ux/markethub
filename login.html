@@ -84,7 +84,7 @@
 
         try {
           await signInWithEmailAndPassword(auth, email, password);
-          window.location.href = 'seller-dashboard.html';
+          window.location.href = 'seller-dashboard-full.html';
         } catch (error) {
           errorDiv.textContent = error.message;
           errorDiv.classList.remove('hidden');
