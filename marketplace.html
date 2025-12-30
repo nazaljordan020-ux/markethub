@@ -68,7 +68,13 @@
         } catch (e) {
             console.error('Error loading Firebase config:', e);
         }
-
+     apiKey: localStorage.getItem('firebase_api_key') || "AIzaSyDo4y9nmVryC29QJMF66pA-pjo-tWAoeDY",
+      authDomain: localStorage.getItem('firebase_auth_domain') || "shopline-7a14f.firebaseapp.com",
+      projectId: localStorage.getItem('firebase_project_id') || "shopline-7a14f",
+      storageBucket: localStorage.getItem('firebase_storage_bucket') || "shopline-7a14f.firebasestorage.app",
+      messagingSenderId: localStorage.getItem('firebase_messaging_sender_id') || "1064176765834",
+      appId: localStorage.getItem('firebase_app_id') || "1:1064176765834:web:f30944d3768599d137d673"
+        
         if (!firebaseConfig) {
             window.location.href = 'config-helper.html';
         } else {
