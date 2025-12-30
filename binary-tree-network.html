@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Binary Tree Network - MarketHub</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+</head>
+<body class="bg-gray-50">
+  <!-- Navigation -->
+  <nav class="bg-white border-b border-gray-200">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex justify-between items-center h-16">
+        <div class="flex items-center">
+          <a href="dashboard.html" class="text-2xl font-bold text-orange-600">MarketHub</a>
+        </div>
+        <div class="flex items-center gap-4">
+          <span id="userName" class="text-gray-700"></span>
+          <button onclick="logout()" class="text-gray-600 hover:text-gray-900">Logout</button>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div class="mb-6">
+      <h1 class="text-3xl font-bold text-gray-900">Binary Tree Network</h1>
+      <p class="text-gray-600 mt-2">Visualize your complete downline structure</p>
+    </div>
+
+    <!-- Loading State -->
+    <div id="loading" class="bg-white rounded-lg shadow-sm p-8 text-center">
+      <div class="inline-block animate-spin rounded-full h-12 w-12 border-4 border-gray-200 border-t-orange-600"></div>
+      <p class="mt-4 text-gray-600">Loading network tree...</p>
+    </div>
+
+    <!-- Tree Container -->
+    <div id="treeContainer" class="hidden bg-white rounded-lg shadow-sm p-8 overflow-x-auto">
+      <div id="treeContent" class="flex justify-center min-w-max"></div>
+    </div>
+
+    <!-- Empty State -->
+    <div id="emptyState" class="hidden bg-white rounded-lg shadow-sm p-12 text-center">
+      <svg class="h-16 w-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+      </svg>
+      <h3 class="text-xl font-semibold text-gray-900">No downline yet</h3>
+      <p class="text-gray-600 mt-2">Share your referral link to build your network</p>
+    </div>
+  </div>
+
+  <script>
+    // Firebase configuration
+    let firebaseConfig = localStorage.getItem('firebaseConfig');
+    if (firebaseConfig) {
+      firebaseConfig = JSON.parse(firebaseConfig);
+      if (!firebase.apps.length) {
+        firebase.initializeApp(firebaseConfig);
+      }
+    }
+
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+    let currentUser = null;
+
+    // Check authentication
+    auth.onAuthStateChanged(async (user) => {
+      if (user) {
+        currentUser = user;
+        await loadUserData();
+        await loadBinaryTree();
+      } else {
+        window.location.href = 'login.html';
+      }
+    });
+
+    async function loadUserData() {
+      try {
+        const userDoc = await db.collection('users').doc(currentUser.uid).get();
+        if (userDoc.exists) {
+          const userData = userDoc.data();
+          document.getElementById('userName').textContent = userData.name || 'User';
+        }
+      } catch (error) {
+        console.error('Error loading user data:', error);
+      }
+    }
+
+    async function loadBinaryTree() {
+      try {
+        const treeData = await buildTreeNode(currentUser.uid);
+        
+        if (!treeData) {
+          showEmptyState();
+          return;
+        }
+
+        renderTree(treeData);
+      } catch (error) {
+        console.error('Error loading tree:', error);
+        alert('Error loading network tree');
+      }
+    }
+
+    async function buildTreeNode(nodeId) {
+      try {
+        const userDoc = await db.collection('users').doc(nodeId).get();
+        if (!userDoc.exists) return null;
+
+        const userData = userDoc.data();
+
+        // Get children
+        const childrenSnapshot = await db.collection('users')
+          .where('parentId', '==', nodeId)
+          .get();
+
+        let childA = null;
+        let childB = null;
+
+        for (const doc of childrenSnapshot.docs) {
+          const childData = doc.data();
+          if (childData.positionInTree === 'A') {
+            childA = await buildTreeNode(doc.id);
+          } else if (childData.positionInTree === 'B') {
+            childB = await buildTreeNode(doc.id);
+          }
+        }
+
+        return {
+          id: nodeId,
+          name: userData.name,
+          email: userData.email,
+          position: userData.positionInTree,
+          children: {
+            A: childA,
+            B: childB
+          }
+        };
+      } catch (error) {
+        console.error('Error building tree node:', error);
+        return null;
+      }
+    }
+
+    function renderTree(treeData) {
+      document.getElementById('loading').classList.add('hidden');
+      document.getElementById('treeContainer').classList.remove('hidden');
+      
+      const treeContent = document.getElementById('treeContent');
+      treeContent.innerHTML = createTreeNodeHTML(treeData);
+    }
+
+    function createTreeNodeHTML(node) {
+      if (!node) {
+        return `
+          <div class="flex flex-col items-center">
+            <div class="w-40 border-2 border-dashed border-gray-300 bg-gray-50 rounded-lg p-4 text-center">
+              <svg class="h-8 w-8 text-gray-400 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/>
+              </svg>
+              <div class="text-xs text-gray-500">Empty Slot</div>
+            </div>
+          </div>
+        `;
+      }
+
+      const hasChildren = node.children.A || node.children.B;
+
+      return `
+        <div class="flex flex-col items-center">
+          <!-- Current Node -->
+          <div class="w-48 border-2 border-orange-200 bg-gradient-to-br from-orange-50 to-white rounded-lg p-4 shadow-md">
+            <div class="flex flex-col items-center gap-2">
+              <div class="flex h-12 w-12 items-center justify-center rounded-full bg-orange-600">
+                <svg class="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                </svg>
+              </div>
+              <div class="w-full text-center">
+                <div class="truncate text-sm font-semibold text-gray-900">${node.name}</div>
+                <div class="truncate text-xs text-gray-600">${node.email}</div>
+                ${node.position ? `
+                  <div class="mt-1 inline-flex rounded-full bg-orange-600 px-2 py-0.5 text-xs font-medium text-white">
+                    Position ${node.position}
+                  </div>
+                ` : ''}
+              </div>
+            </div>
+          </div>
+
+          ${hasChildren ? `
+            <!-- Connecting Line -->
+            <div class="my-4 h-8 w-0.5 bg-orange-300"></div>
+            
+            <!-- Children -->
+            <div class="flex gap-8">
+              <!-- Position A -->
+              <div class="flex flex-col items-center">
+                <div class="mb-2 text-xs font-medium text-gray-600 bg-green-100 px-3 py-1 rounded-full">Position A</div>
+                ${createTreeNodeHTML(node.children.A)}
+              </div>
+
+              <!-- Position B -->
+              <div class="flex flex-col items-center">
+                <div class="mb-2 text-xs font-medium text-gray-600 bg-blue-100 px-3 py-1 rounded-full">Position B</div>
+                ${createTreeNodeHTML(node.children.B)}
+              </div>
+            </div>
+          ` : ''}
+        </div>
+      `;
+    }
+
+    function showEmptyState() {
+      document.getElementById('loading').classList.add('hidden');
+      document.getElementById('emptyState').classList.remove('hidden');
+    }
+
+    function logout() {
+      auth.signOut().then(() => {
+        window.location.href = 'login.html';
+      });
+    }
+  </script>
+</body>
+</html>
